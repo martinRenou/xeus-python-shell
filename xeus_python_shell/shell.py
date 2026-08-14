@@ -55,7 +55,7 @@ class XPythonLoopRunner:
                 callback() # <- this will send the execute request reply
 
         future =  asyncio.get_running_loop().create_task(wrapped(coro, post_execute, callback, self.run_cell_lock))
-            
+
 xeus_loop_runner = XPythonLoopRunner()
 
 class XPythonShell(InteractiveShell):
@@ -136,10 +136,20 @@ class XPythonShell(InteractiveShell):
         silent=False,
         shell_futures=True,
         cell_id=None,
-        ):
-        
+    ):
+        preprocessing_exc_tuple = None
+
+        # run upstream transforms
+        try:
+            transformed_cell = self.transform_cell(raw_cell)
+        except Exception:
+            transformed_cell = raw_cell
+            preprocessing_exc_tuple = sys.exc_info()
+
         future = super().run_cell_async(
             raw_cell=raw_cell,
+            transformed_cell=transformed_cell,
+            preprocessing_exc_tuple=preprocessing_exc_tuple,
             store_history=store_history,
             silent=silent,
             shell_futures=shell_futures,
